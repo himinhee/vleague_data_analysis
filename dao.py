@@ -65,16 +65,16 @@ def update_matches(vo, target, id):
     cur = conn.cursor()
     print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
 
-    # update
+    # Build sql sentence
     sql=f'update {target} set '
 
     for i in list(zip(vo.keys(), vo.values())):
         new=f"{i[0]} = '{str(i[1])}',"
         sql=sql+new
 
-    sql=sql[0:-1]+" where match_set= '"+id+"'"
-    print(sql)
+    sql=sql[0:-1]+f" where match_set= '{id}'"
 
+    # Update DB
     result = cur.execute(sql)
     print('3. sql문을 만들어서 mysql로 보낸후 결과 ', result)
 

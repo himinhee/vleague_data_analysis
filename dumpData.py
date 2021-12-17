@@ -33,62 +33,79 @@ for i in match_set:
         hometeam = i[2]
         awayteam = i[3]
 
-# 3. Crawling을 통해 경기 정보 가져와서 DB 저장
-# -> 함수화하고 address_list 반복문으로 전환해야 함!
+# 3. Crawling을 통해 경기 일반 정보를 가져와서 DB 저장하는 함수 정의
 
-# 3-1 Crawling으로 데이터 가져오기
-scores_HT, scores_AT, rotation_HT, rotation_AT=kovo_crawling.get_basic_info(address)
+def get_match_info(address):
+    # 3-1 Crawling으로 데이터 가져오기
+    scores_HT, scores_AT, rotation_HT, rotation_AT=kovo_crawling.get_basic_info(address)
 
-# 3-2 matches table 추가 항목 : maxset score_HT score_AT match W/L set W/L
-add_matches=dict()
-add_matches['maxset']=scores_HT[-1]+scores_AT[-1]
+    # 3-2 matches table 추가 항목 : maxset score_HT score_AT match W/L set W/L
+    add_matches=dict()
+    add_matches['maxset']=scores_HT[-1]+scores_AT[-1]
 
-if scores_HT[-1]>scores_AT[-1]:
-    add_matches['match_winner']=hometeam
-    add_matches['match_loser']=awayteam
-else:
-    add_matches['match_winner']=awayteam
-    add_matches['match_loser']=hometeam
+    if scores_HT[-1]>scores_AT[-1]:
+        add_matches['match_winner']=hometeam
+        add_matches['match_loser']=awayteam
+    else:
+        add_matches['match_winner']=awayteam
+        add_matches['match_loser']=hometeam
 
-current=int(address[-1])
-add_matches['score_HT']=scores_HT[current-1]
-add_matches['score_AT']=scores_AT[current-1]
+    current=int(address[-1])
+    add_matches['score_HT']=scores_HT[current-1]
+    add_matches['score_AT']=scores_AT[current-1]
 
-if add_matches['score_HT']>add_matches['score_AT']:
-    add_matches['set_winner']=hometeam
-    add_matches['set_loser']=awayteam
-else:
-    add_matches['set_winner']=awayteam
-    add_matches['set_loser']=hometeam
+    if add_matches['score_HT']>add_matches['score_AT']:
+        add_matches['set_winner']=hometeam
+        add_matches['set_loser']=awayteam
+    else:
+        add_matches['set_winner']=awayteam
+        add_matches['set_loser']=hometeam
 
-# 3-3 matches table 추가 항목 : home rotation away rotation
-# 3-3-1 DB로부터 player id 정보 가져오기
-allplayers=dao.readall("code_player")
-allplayers_df=pd.DataFrame(allplayers, columns=['player_id','current_team','player','backnum','position_real'])
+    # 3-3 matches table 추가 항목 : home rotation away rotation
+    # 3-3-1 DB로부터 player id 정보 가져오기
+    allplayers=dao.readall("code_player")
+    allplayers_df=pd.DataFrame(allplayers, columns=['player_id','current_team','player','backnum','position_real'])
 
-# 3-3-2 rotation 정보에 player_id 추가
-rot_HT=pd.merge(rotation_HT, allplayers_df[allplayers_df['current_team']==hometeam], on='player', how='inner')
-rot_AT=pd.merge(rotation_AT, allplayers_df[allplayers_df['current_team']==awayteam], on='player', how='inner')
+    # 3-3-2 rotation 정보에 player_id 추가
+    rot_HT=pd.merge(rotation_HT, allplayers_df[allplayers_df['current_team']==hometeam], on='player', how='inner')
+    rot_AT=pd.merge(rotation_AT, allplayers_df[allplayers_df['current_team']==awayteam], on='player', how='inner')
 
-# 3-3-3 matches table에 추가할 내용을 add_matches에 넣기
-# rotation 1~6 정보 추가
-for i in range(1, 7):
-    key_HT="home_rot"+str(i)
-    key_AT="away_rot"+str(i)
-    add_matches[key_HT]=rot_HT.iloc[i-1,3]
-    add_matches[key_AT]=rot_AT.iloc[i-1,3]
+    # 3-3-3 matches table에 추가할 내용을 add_matches에 넣기
+    # rotation 1~6 정보 추가
+    for i in range(1, 7):
+        key_HT="home_rot"+str(i)
+        key_AT="away_rot"+str(i)
+        key_HT2=key_HT+"_name"
+        key_AT2=key_AT+"_name"
+        add_matches[key_HT]=rot_HT.iloc[i-1,3]
+        add_matches[key_AT]=rot_AT.iloc[i-1,3]
+        add_matches[key_HT2]=rot_HT.iloc[i-1,1]
+        add_matches[key_AT2]=rot_AT.iloc[i-1,1]
 
-# libero 정보 추가
-add_matches['home_li1']=rot_HT.iloc[6,3]
-add_matches['away_li1']=rot_AT.iloc[6,3]
+    # libero 정보 추가
+    add_matches['home_li1']=rot_HT.iloc[6,3]
+    add_matches['away_li1']=rot_AT.iloc[6,3]
+    add_matches['home_li1_name']=rot_HT.iloc[6,1]
+    add_matches['away_li1_name']=rot_AT.iloc[6,1]
 
-if len(rot_HT.index)>7:
-    add_matches['home_li2'] = rot_HT.iloc[7, 3]
-if len(rot_HT.index)>7:
-    add_matches['away_li2'] = rot_AT.iloc[7, 3]
+    if len(rot_HT.index)>7:
+        add_matches['home_li2'] = rot_HT.iloc[7, 3]
+        add_matches['home_li2_name'] = rot_HT.iloc[7, 1]
+    if len(rot_HT.index)>7:
+        add_matches['away_li2'] = rot_AT.iloc[7, 3]
+        add_matches['away_li2_name'] = rot_AT.iloc[7,1]
 
-# 3-4 "matches" table update
-id=match_set[-1][0]
-dao.update_matches(add_matches, "matches", id)
+    # 3-4 "matches" table update
+    id=match_set[-1][0]
+    dao.update_matches(add_matches, "matches", id)
 
+# 4. Crawling을 통해 실시간 중계 정보를 가져와서 DB 저장하는 함수 정의
 #rally_info=kovo_crawling.get_detail(address)
+
+# 5. 정규시즌 경기리스트, 개별 경기 crawling function(from #3)을 이용하여 matches table update
+#print(address)
+#get_match_info(address)
+for i in address_list:
+    print(i)
+    get_match_info(i)
+# 6. 정규시즌 경기리스트, 개별 경기 crawling function(from #4)을 이용하여 matches table update
