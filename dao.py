@@ -59,28 +59,18 @@ def read_column(target, column_list):
     return rows
 
 # 5. Update match info
-def update_matches(vo, rotation_HT, rotation_AT, id):
+def update_matches(vo, target, id):
     # Call db connection func.
     conn = connect()
     cur = conn.cursor()
     print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
 
     # update
-    sql="update matches set "
+    sql=f'update {target} set '
 
     for i in list(zip(vo.keys(), vo.values())):
-        sql=sql+i[0]+"="+str(i[1])+","
-
-    for i in range(1,7):
-        sql=sql+"home_rot"+str(i)+"="+rotation_HT.iloc[i-1,1]+","
-        sql=sql+"away_rot"+str(i)+"="+rotation_AT.iloc[i-1,1]+","
-
-    sql=sql+"home_li1="+rotation_HT.iloc[6,1]+","+"away_li1="+rotation_AT.iloc[6,1]+","
-
-    if rotation_HT.iloc[7,1] !="":
-        sql=sql+"home_li2="+rotation_HT.iloc[7,1]+","
-    if rotation_AT.iloc[7,1] !="":
-        sql=sql+"away_li2="+rotation_AT.iloc[7,1]+","
+        new=f"{i[0]} = '{str(i[1])}',"
+        sql=sql+new
 
     sql=sql[0:-1]+" where match_set= '"+id+"'"
     print(sql)

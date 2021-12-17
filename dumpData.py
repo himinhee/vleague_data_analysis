@@ -44,22 +44,22 @@ add_matches=dict()
 add_matches['maxset']=scores_HT[-1]+scores_AT[-1]
 
 if scores_HT[-1]>scores_AT[-1]:
-    add_matches['match_winner']='hometeam'
-    add_matches['match_loser']='awayteam'
+    add_matches['match_winner']=hometeam
+    add_matches['match_loser']=awayteam
 else:
-    add_matches['match_winner']='awayteam'
-    add_matches['match_loser']='hometeam'
+    add_matches['match_winner']=awayteam
+    add_matches['match_loser']=hometeam
 
 current=int(address[-1])
 add_matches['score_HT']=scores_HT[current-1]
 add_matches['score_AT']=scores_AT[current-1]
 
 if add_matches['score_HT']>add_matches['score_AT']:
-    add_matches['set_winner']='hometeam'
-    add_matches['set_loser']='awayteam'
+    add_matches['set_winner']=hometeam
+    add_matches['set_loser']=awayteam
 else:
-    add_matches['set_winner']='awayteam'
-    add_matches['set_loser']='hometeam'
+    add_matches['set_winner']=awayteam
+    add_matches['set_loser']=hometeam
 
 # 3-3 matches table 추가 항목 : home rotation away rotation
 # 3-3-1 DB로부터 player id 정보 가져오기
@@ -70,8 +70,25 @@ allplayers_df=pd.DataFrame(allplayers, columns=['player_id','current_team','play
 rot_HT=pd.merge(rotation_HT, allplayers_df[allplayers_df['current_team']==hometeam], on='player', how='inner')
 rot_AT=pd.merge(rotation_AT, allplayers_df[allplayers_df['current_team']==awayteam], on='player', how='inner')
 
+# 3-3-3 matches table에 추가할 내용을 add_matches에 넣기
+# rotation 1~6 정보 추가
+for i in range(1, 7):
+    key_HT="home_rot"+str(i)
+    key_AT="away_rot"+str(i)
+    add_matches[key_HT]=rot_HT.iloc[i-1,3]
+    add_matches[key_AT]=rot_AT.iloc[i-1,3]
+
+# libero 정보 추가
+add_matches['home_li1']=rot_HT.iloc[6,3]
+add_matches['away_li1']=rot_AT.iloc[6,3]
+
+if len(rot_HT.index)>7:
+    add_matches['home_li2'] = rot_HT.iloc[7, 3]
+if len(rot_HT.index)>7:
+    add_matches['away_li2'] = rot_AT.iloc[7, 3]
+
 # 3-4 "matches" table update
 id=match_set[-1][0]
-#dao.update_matches(add_matches, rotation_HT, rotation_AT, id)
+dao.update_matches(add_matches, "matches", id)
 
 #rally_info=kovo_crawling.get_detail(address)
