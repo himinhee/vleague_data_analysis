@@ -109,9 +109,10 @@ def get_detail(address):
     # 1. Get html data from the target http address
     soup = get_html(address)
     data = soup.find('div', 'wrp_live_bottom').find('div', 'center')
-
     rally_info=data.find('div','wrp_liverecord').find('div','wrp_con').find_all('li')
 
+    # 2. html to list
+    # 각 li
     return rally_info
 
     # 랠리와 랠리의 구분 : 득점 행이 null이 아닌 경우

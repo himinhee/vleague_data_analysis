@@ -4,7 +4,7 @@
 # Input : 크롤링 대상 경기 리스트
 # Process : kovo_crawling.py 호출을 통해 경기별로 경기기록 정보 받기
 # Output : SQL DB에 경기기록 저장
-# Version : 0.1 - 2021-12-13
+# Version : 0.5 - 2021-12-17
 # By 이민희
 ##############################################################################
 
@@ -24,18 +24,24 @@ match_set=dao.read_column("matches", ["match_set","round", "hometeam", "awayteam
 # g_num= 남자부는 홀수, 여자부는 짝수 (라운드당 남자부는 21경기, 여자부는 15경기) -> db에 저장된 정보 이용
 # address 예시='https://www.kovo.co.kr/media/popup_result.asp?season=018&g_part=201&r_round=1&g_num=2&r_set=1'
 
-address_list=[]
+match_list=[]
 for i in match_set:
     if i[1][1]=='R':
         codes=i[0].split('_')
         address='https://www.kovo.co.kr/media/popup_result.asp?season={}&g_part=201&r_round={}&g_num={}&r_set={}'.format(codes[0],i[1][0],codes[1],codes[2])
-        address_list.append(address)
-        hometeam = i[2]
-        awayteam = i[3]
+        match_list.append([address,i[0],i[2],i[3]])
+    elif i[1]=='PO':
+        codes=i[0].split('_')
+        address='https://www.kovo.co.kr/media/popup_result.asp?season={}&g_part=202&r_round=1&g_num={}&r_set={}'.format(codes[0],codes[1],codes[2])
+        match_list.append([address,i[0],i[2],i[3]])
+    elif i[1]=='CS':
+        codes=i[0].split('_')
+        address='https://www.kovo.co.kr/media/popup_result.asp?season={}&g_part=203&r_round=1&g_num={}&r_set={}'.format(codes[0],codes[1],codes[2])
+        match_list.append([address,i[0],i[2],i[3]])
 
 # 3. Crawling을 통해 경기 일반 정보를 가져와서 DB 저장하는 함수 정의
 
-def get_match_info(address):
+def get_match_info(address, id, hometeam, awayteam):
     # 3-1 Crawling으로 데이터 가져오기
     scores_HT, scores_AT, rotation_HT, rotation_AT=kovo_crawling.get_basic_info(address)
 
@@ -91,21 +97,23 @@ def get_match_info(address):
     if len(rot_HT.index)>7:
         add_matches['home_li2'] = rot_HT.iloc[7, 3]
         add_matches['home_li2_name'] = rot_HT.iloc[7, 1]
-    if len(rot_HT.index)>7:
+    if len(rot_AT.index)>7:
         add_matches['away_li2'] = rot_AT.iloc[7, 3]
         add_matches['away_li2_name'] = rot_AT.iloc[7,1]
 
     # 3-4 "matches" table update
-    id=match_set[-1][0]
     dao.update_matches(add_matches, "matches", id)
 
 # 4. Crawling을 통해 실시간 중계 정보를 가져와서 DB 저장하는 함수 정의
 #rally_info=kovo_crawling.get_detail(address)
+#print(rally_info)
 
 # 5. 정규시즌 경기리스트, 개별 경기 crawling function(from #3)을 이용하여 matches table update
-#print(address)
-#get_match_info(address)
-for i in address_list:
-    print(i)
-    get_match_info(i)
+for i in match_list:
+    address=i[0]
+    match_set_id=i[1]
+    hometeam=i[2]
+    awayteam=i[3]
+    get_match_info(address,match_set_id,hometeam,awayteam)
+
 # 6. 정규시즌 경기리스트, 개별 경기 crawling function(from #4)을 이용하여 matches table update

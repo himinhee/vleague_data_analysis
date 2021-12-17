@@ -8,7 +8,7 @@ from datetime import datetime
 def connect():
     # db connection
     conn = pymysql.connect(host='localhost', port=3306, user='root', password='Mindy1001!', db='vleague_women', charset='utf8')
-    print('1. MySQL DB connection ', conn)
+    #print('1. MySQL DB connection ', conn)
     return conn
 
 # 2. db disconnection
@@ -22,7 +22,7 @@ def readall(target):
     # Call db connection func.
     conn = connect()
     cur = conn.cursor()
-    print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
+    #print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
 
     # read
     sql="select * from "+target
@@ -39,7 +39,7 @@ def read_column(target, column_list):
     # Call db connection func.
     conn = connect()
     cur = conn.cursor()
-    print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
+    #print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
 
     # Read
     columns =""
@@ -63,7 +63,7 @@ def update_matches(vo, target, id):
     # Call db connection func.
     conn = connect()
     cur = conn.cursor()
-    print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
+    #print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
 
     # Build sql sentence
     sql=f'update {target} set '
