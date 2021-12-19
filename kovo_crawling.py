@@ -111,9 +111,23 @@ def get_detail(address):
     data = soup.find('div', 'wrp_live_bottom').find('div', 'center')
     rally_info=data.find('div','wrp_liverecord').find('div','wrp_con').find_all('li')
 
-    # 2. html to list
-    # 각 li
-    return rally_info
+    # 2. html to dataframe
+    # 각 li tag 안에는 4개의 spam tagg 존재
+    # span 1 : hometeam touch info
+    # span 2 : hometeam score
+    # span 3 : awayteam score
+    # span 4 : awayteam touch info
+
+    data=[]
+    for i in rally_info:
+        line=i.find_all('span')
+        temp=[]
+        for j in line:
+            temp.append(j.text.strip())
+        data.append(temp)
+
+    rally_df=pd.DataFrame(data, columns=['action_HT','score_HT','score_AT','action_AT'])
+    return rally_df
 
     # 랠리와 랠리의 구분 : 득점 행이 null이 아닌 경우
 
