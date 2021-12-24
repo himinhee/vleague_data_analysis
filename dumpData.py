@@ -12,6 +12,7 @@
 import dao
 import kovo_crawling
 import pandas as pd
+import temp
 
 # 1. DB의 경기 리스트 가져오기
 match_set=dao.read_column("matches", ["match_set","round", "hometeam", "awayteam"])
@@ -109,11 +110,18 @@ def get_match_info(address, id, hometeam, awayteam):
 #print(rally_info)
 
 # 5. 정규시즌 경기리스트, 개별 경기 crawling function(from #3)을 이용하여 matches table update
+all_cases = set()
 for i in match_list:
     address=i[0]
     match_set_id=i[1]
     hometeam=i[2]
     awayteam=i[3]
-    get_match_info(address,match_set_id,hometeam,awayteam)
+    new_cases=temp.gather_cases(address)
+    all_cases=all_cases.union(new_cases)
+    print(i)
+#     get_match_info(address,match_set_id,hometeam,awayteam)
+
+print(len(all_cases))
+print(all_cases)
 
 # 6. 정규시즌 경기리스트, 개별 경기 crawling function(from #4)을 이용하여 matches table update
