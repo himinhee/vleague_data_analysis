@@ -82,17 +82,24 @@ def update_matches(vo, target, id):
     disconnect(conn)
 
 
-# 3. create function
-def create(vo):
+# 6. insert touch info into liverecord table
+def create_liverecord(info_list):
     # Call db connection func.
     conn = connect()
     cur = conn.cursor()
-    print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
+    #print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
 
     # Create - list case
-    sql="insert into diary (writeday, title, content) values (NOW(), %s, %s)"
-    result=cur.execute(sql, vo)
-    print('3. sql문을 만들어서 mysql로 보낸후 결과 ', result)
+    sql='''
+    insert into liverecord (touch_player,touch_player_name,touch_player_position,
+    touch_type,touch_type_detail,touch_result,who_touch,liverecord_id,
+    match_set,rally_num,current_score_H,current_score_A,serve_team,receive_team,
+    rally_win, rally_lose) values 
+    (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    '''
+
+    result=cur.execute(sql, info_list)
+    #print('3. sql문을 만들어서 mysql로 보낸후 결과 ', result)
 
     # Disconnect DB
     disconnect(conn)

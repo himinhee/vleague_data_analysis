@@ -12,7 +12,7 @@
 import dao
 import kovo_crawling
 import pandas as pd
-import temp
+import create_liverecord
 
 # 1. DB의 경기 리스트 가져오기
 match_set=dao.read_column("matches", ["match_set","round", "hometeam", "awayteam"])
@@ -41,7 +41,6 @@ for i in match_set:
         match_list.append([address,i[0],i[2],i[3]])
 
 # 3. Crawling을 통해 경기 일반 정보를 가져와서 DB 저장하는 함수 정의
-
 def get_match_info(address, id, hometeam, awayteam):
     # 3-1 Crawling으로 데이터 가져오기
     scores_HT, scores_AT, rotation_HT, rotation_AT=kovo_crawling.get_basic_info(address)
@@ -106,22 +105,49 @@ def get_match_info(address, id, hometeam, awayteam):
     dao.update_matches(add_matches, "matches", id)
 
 # 4. Crawling을 통해 실시간 중계 정보를 가져와서 DB 저장하는 함수 정의
-#rally_info=kovo_crawling.get_detail(address)
-#print(rally_info)
+# create_liverecord.py 참조
 
 # 5. 정규시즌 경기리스트, 개별 경기 crawling function(from #3)을 이용하여 matches table update
-all_cases = set()
+# 6. 정규시즌 경기리스트, 개별 경기 crawling function(from #4)을 이용하여 liverecord table update
 for i in match_list:
     address=i[0]
     match_set_id=i[1]
     hometeam=i[2]
     awayteam=i[3]
-    new_cases=temp.gather_cases(address)
-    all_cases=all_cases.union(new_cases)
     print(i)
-#     get_match_info(address,match_set_id,hometeam,awayteam)
+#    get_match_info(address,match_set_id,hometeam,awayteam)
+    create_liverecord.get_liverecord(address, match_set_id, hometeam, awayteam)
 
-print(len(all_cases))
-print(all_cases)
+# 7. liverecord update
+#touch_num -> 0~3 (0: serve) -> 마지막에 따로 입력
+#rally_count -> who_touch의 왕복에 따라 따로 입력
+#touch_situation -> TBD
+#그외 : rotation
 
-# 6. 정규시즌 경기리스트, 개별 경기 crawling function(from #4)을 이용하여 matches table update
+
+# etc. text 정보의 모든 case 찾기
+def gather_cases(address):
+    rally_data = kovo_crawling.get_detail(address)
+    exceptions = ['팀실패', '팀득점', '타임']
+    cases = set()
+    for n in range(1, rally_data.shape[0] - 1):
+        action = ''
+        if type(rally_data.iloc[n, 0]) == float:
+            action = rally_data.iloc[n, 3]
+        else:
+            action = rally_data.iloc[n, 0]
+
+        if action not in exceptions:
+            text = action.split(' ')[1:]
+            cases.add(" ".join(text))
+    return cases
+
+# all_cases = set()
+# for i in match_list:
+#     address=i[0]
+#     match_set_id=i[1]
+#     hometeam=i[2]
+#     awayteam=i[3]
+#     new_cases=gather_cases(address)
+#     all_cases=all_cases.union(new_cases)
+#     print(i)
