@@ -52,7 +52,7 @@ def get_liverecord(address, match_set, hometeam, awayteam):
 
     # Set별 중계기록을 Rally단위로 쪼개기
     exceptional_cases=['경고', '교체', '세트퇴장', '투입', '타임']
-    team_cases=['팀실패','팀성공', '팀득점', '팀 포지션폴트']
+    team_cases=['팀실패','팀성공', '팀득점', '팀 포지션폴트', '포지션폴트']
 
     rallies=[]
     rally_start=1

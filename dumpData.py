@@ -109,7 +109,7 @@ def get_match_info(address, id, hometeam, awayteam):
 
 # 5. 정규시즌 경기리스트, 개별 경기 crawling function(from #3)을 이용하여 matches table update
 # 6. 정규시즌 경기리스트, 개별 경기 crawling function(from #4)을 이용하여 liverecord table update
-for i in match_list:
+for i in match_list[353:]:
     address=i[0]
     match_set_id=i[1]
     hometeam=i[2]
