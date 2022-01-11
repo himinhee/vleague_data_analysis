@@ -1,4 +1,4 @@
-###### Diary CRUD Module #####
+###### Here_is_volleyball DB CRUD Module #####
 
 # python package - pip install pymysql
 import pymysql
@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. db connection
 def connect():
     # db connection
-    conn = pymysql.connect(host='localhost', port=3306, user='root', password='Mindy1001!', db='vleague_women', charset='utf8')
+    conn = pymysql.connect(host='localhost', port=3306, user='root', password='1234', db='vleague_women', charset='utf8')
     #print('1. MySQL DB connection ', conn)
     return conn
 
@@ -81,11 +81,8 @@ def update_matches(vo, target, id):
     # Disconnect DB
     disconnect(conn)
 
-
 # 6. insert touch info into liverecord table
-def create_liverecord(info_list):
-    # Call db connection func.
-    conn = connect()
+def create_liverecord(info_list, conn):
     cur = conn.cursor()
     #print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
 
@@ -100,21 +97,51 @@ def create_liverecord(info_list):
 
     result=cur.execute(sql, info_list)
     #print('3. sql문을 만들어서 mysql로 보낸후 결과 ', result)
+    if result < 1:
+        print('error on create_liverecord', info_list)
+    else:
+        print(info_list,'- created liverecord')
+    #print(time.time())
+
+# 7. insert rally & touch count info into liverecord table
+def update_count_info(count_df):
+    # Call db connection func.
+    conn = connect()
+    cur = conn.cursor()
+
+    # update
+    sql = "update liverecord set rally_count=%s, touch_num=%s, touch_1ahead=%s, touch_2ahead=%s, touch_1behind=%s where liverecord_id = %s"
+
+    for i in range(count_df.shape[0]):
+        result = cur.execute(sql, list(count_df.iloc[i]))
 
     # Disconnect DB
     disconnect(conn)
 
-# 4. update function
-def update(vo):
+# 8. Update - teamerror from matches
+def update_teamerror(data_list):
     # Call db connection func.
     conn = connect()
     cur = conn.cursor()
-    print('2. DB connection stream을 접글할 수 있는 객체 획득 성공 ', cur)
 
     # update
-    sql="update diary set title= %s, content = %s where id = %s"
-    result = cur.execute(sql, vo)
-    print('3. sql문을 만들어서 mysql로 보낸후 결과 ', result)
+    for i in data_list:
+        sql="update matches set teamerror_HT= %s, teamerror_AT = %s where match_set = %s"
+        result = cur.execute(sql, i)
+
+    # Disconnect DB
+    disconnect(conn)
+
+# 9. update - touch_result for each attach attempt
+def update_touch_result(update_list):
+    # Call db connection func.
+    conn = connect()
+    cur = conn.cursor()
+
+    # update
+    for i in update_list:
+        sql="update liverecord set touch_result = %s where liverecord_id = %s"
+        result = cur.execute(sql, i)
 
     # Disconnect DB
     disconnect(conn)

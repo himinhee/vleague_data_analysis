@@ -109,20 +109,127 @@ def get_match_info(address, id, hometeam, awayteam):
 
 # 5. 정규시즌 경기리스트, 개별 경기 crawling function(from #3)을 이용하여 matches table update
 # 6. 정규시즌 경기리스트, 개별 경기 crawling function(from #4)을 이용하여 liverecord table update
-for i in match_list[353:]:
+for i in match_list:
     address=i[0]
-    match_set_id=i[1]
+    match_set=i[1]
     hometeam=i[2]
     awayteam=i[3]
-    print(i)
+    print('liverecord: ',match_set)
 #    get_match_info(address,match_set_id,hometeam,awayteam)
-    create_liverecord.get_liverecord(address, match_set_id, hometeam, awayteam)
+    create_liverecord.get_liverecord(address, match_set, hometeam, awayteam)
 
 # 7. liverecord update
-#touch_num -> 0~3 (0: serve) -> 마지막에 따로 입력
-#rally_count -> who_touch의 왕복에 따라 따로 입력
-#touch_situation -> TBD
-#그외 : rotation
+
+# rally_count : 1점을 내기까지의 rally 갯수 및 몇번째 rally인지 count
+# touch_num : 1개 rally 내에 몇번째 touch인지 정보
+# touch_1ahead : 바로 이전 touch가 같은 rally 안에 있을 경우, 그 touch_id 저장
+# touch_2ahead : 2step 전의 touch가 같은 rally 안에 있을 경우, 그 touch_id 저장
+# touch_1behind : 바로 다음 touch가 같은 rally 안에 있는 경우, 그 touch_id 저장
+def add_count_info(match_set, hometeam, awayteam,df):
+    # liverecord table 내 해당 경기 정보
+    target_record = df[df.match_set == match_set].copy()
+    target_record.reset_index(inplace=True)
+    target_record.drop('index', axis=1, inplace=True)
+
+    # 초기값 세팅
+    rally_count = 0
+    touch_num = 0
+    who_touch = target_record.iloc[0, 3]
+    previous_rally_num = 1
+    data_size=target_record.shape[0]
+    for i in range(data_size):
+        new_rally_num= target_record.iloc[i, 2]
+        if previous_rally_num != new_rally_num:
+            rally_count=0
+            touch_num=0
+            previous_rally_num = new_rally_num
+            if target_record.iloc[i-1,-1]==hometeam:
+                who_touch=0
+            else:
+                who_touch=1
+
+        new_touch = target_record.iloc[i, 3]
+        # who_touch가 이전과 같으면 touch_num만 증가. rally_count는 그대로
+        if who_touch==new_touch:
+            touch_num=touch_num+1
+        # who_touch가 이전과 다르면 touch_num은 다시 1, rally_count는 증가
+        elif target_record.iloc[i,4]=='40':
+            touch_num=0
+            rally_count=rally_count+1
+            who_touch = new_touch
+        else:
+            touch_num=1
+            rally_count=rally_count+1
+            who_touch = new_touch
+
+        target_record.iloc[i,5] = rally_count
+        target_record.iloc[i,6] = touch_num
+
+        if (i > 0 ) & (target_record.iloc[i,2]==target_record.iloc[i-1,2]):
+            target_record.loc[i,'touch_1ahead']=target_record.loc[i-1,'liverecord_id']
+
+        if (i > 1 ) & (target_record.iloc[i,2]==target_record.iloc[i-2,2]):
+            target_record.loc[i,'touch_2ahead']=target_record.loc[i-2,'liverecord_id']
+
+        if (i < data_size - 1):
+            this=target_record.iloc[i,2]
+            next=target_record.iloc[i+1,2]
+            if this == next:
+                target_record.loc[i,'touch_1behind']=target_record.loc[i+1,'liverecord_id']
+    new_record=target_record[['rally_count','touch_num','touch_1ahead','touch_2ahead','touch_1behind','liverecord_id']]
+    new_record.fillna("", inplace=True)
+    return new_record
+
+# 전체 liverecord 가져오기
+rows = dao.read_column('liverecord',
+                       ['liverecord_id', 'match_set', 'rally_num', 'who_touch', 'touch_result', 'rally_count',
+                        'touch_num', 'rally_win', 'touch_2ahead', 'touch_1ahead', 'touch_1behind'])
+liverecord_df = pd.DataFrame(rows,
+                 columns=['liverecord_id', 'match_set', 'rally_num', 'who_touch', 'touch_result', 'rally_count','touch_num', 'rally_win', 'touch_2ahead', 'touch_1ahead', 'touch_1behind'])
+
+# 경기별로 rally & touch info 함수 호출 및 dataframe에 저장
+count_df=pd.DataFrame()
+for i in match_list:
+    match_set=i[1]
+    hometeam=i[2]
+    awayteam=i[3]
+    print('rally count update: ',match_set)
+    target_record=add_count_info(match_set, hometeam, awayteam,liverecord_df)
+    count_df=pd.concat([count_df, target_record])
+
+dao.update_count_info(count_df)
+
+# 8. match_set 별 팀범실(팀 포지션폴트) 산출 및 matches에 저장
+teamerror_num = []
+for i in match_list:
+    address = i[0]
+    match_set = i[1]
+    hometeam = i[2]
+    awayteam = i[3]
+    print(address)
+    # Crawling 및 결측치 처리
+    rally_data = kovo_crawling.get_detail(address)
+    rally_data['score_HT'] = rally_data['score_HT'].apply(lambda x: -1 if x == "" else x)
+    rally_data['score_AT'] = rally_data['score_AT'].apply(lambda x: -1 if x == "" else x)
+    rally_data['score_HT'] = rally_data['score_HT'].astype(int)
+    rally_data['score_AT'] = rally_data['score_AT'].astype(int)
+
+    # 팀범실 찾기
+    teamerror_HT = rally_data[rally_data.action_HT == '팀 포지션폴트']['action_HT']
+    teamerror_AT = rally_data[rally_data.action_AT == '팀 포지션폴트']['action_AT']
+    teamerror_num.append([match_set, len(teamerror_HT), len(teamerror_AT)])
+
+# 9. liverecord 내 touch_situation 정보 update
+# 9.1 공격 차단 & 공격 유효브로킹 & 공격 디그 구분
+# case 1) 공격 차단 : 공격 시도(touch_type=1 & touch_result=00)인 경우, touch_1behind가 있고 그 touch_type=4 & touch_result=10 => touch_result=30 으로 update
+# case 2) 공격이 유효블로킹된 경우 : 공격 시도(touch_type=1 & touch_result=00)인 경우, touch_1behind가 있고 그 touch_type=4 & touch_result=50 => touch_result=40 으로 update
+# case 3) 공격이 디그된 경우 : 공격 시도(touch_type=1 & touch_result=00)인 경우, touch_1behind가 있고 그 touch_type=2 & touch_result=10 => touch_result=60 으로 update
+
+
+# 9.2 touch_situation -> TBD
+
+
+# 10. liverecord 내 rotation 정보 update
 
 
 # etc. text 정보의 모든 case 찾기

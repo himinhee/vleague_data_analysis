@@ -38,11 +38,6 @@ def get_liverecord(address, match_set, hometeam, awayteam):
     receive_team=''
     rally_count=0
     touch_num=0
-    touch_player=''
-    touch_player_name=''
-    touch_type=0
-    touch_type_detail=0
-    touch_result=0
 
     # 세트의 첫 서브팀 확인 - who_touch=0: Hometeam serve로 시작
     if rally_data.iloc[1,0] == "":
@@ -100,6 +95,9 @@ def get_liverecord(address, match_set, hometeam, awayteam):
         touch_info=[touch_player, touch_player_name, touch_player_position, touch_type, touch_type_detail, touch_result]
         return touch_info
 
+    # Connect DB
+    conn=dao.connect()
+
     # 각 Rally에 대해 Touch별로 쪼개서 정보 DB에 저장
     for i in rallies:
         current_score_H = i[2]
@@ -134,23 +132,20 @@ def get_liverecord(address, match_set, hometeam, awayteam):
                 idx = idx + 1
                 record_id=match_set+'_'+"{0:0=3d}".format(idx)
                 who_touch=0
-                print(HT[j])
                 touch_info= get_touch_info(HT, hometeam, players, code_touch)
                 touch_info.append(who_touch)
                 touch_info.append(record_id)
                 info_list = touch_info + other_info
-                dao.create_liverecord(info_list)
-
+                dao.create_liverecord(info_list,conn)
             elif (AT[j]!="") & (AT[j] not in team_cases):
                 idx = idx + 1
                 record_id=match_set+'_'+"{0:0=3d}".format(idx)
                 who_touch=1
-                print(AT[j])
                 touch_info= get_touch_info(AT, awayteam, players, code_touch)
                 touch_info.append(who_touch)
                 touch_info.append(record_id)
                 info_list = touch_info + other_info
-                dao.create_liverecord(info_list)
+                dao.create_liverecord(info_list,conn)
 
             rally_count=rally_count+1
             touch_num=touch_num+1
@@ -160,3 +155,6 @@ def get_liverecord(address, match_set, hometeam, awayteam):
             who_touch=1
         else:
             who_touch=0
+
+    # Disconnect DB
+    dao.disconnect(conn)

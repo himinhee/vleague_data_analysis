@@ -112,7 +112,7 @@ def get_detail(address):
     rally_info=data.find('div','wrp_liverecord').find('div','wrp_con').find_all('li')
 
     # 2. html to dataframe
-    # 각 li tag 안에는 4개의 spam tagg 존재
+    # 각 li tag 안에는 4개의 span tagg 존재
     # span 1 : hometeam touch info
     # span 2 : hometeam score
     # span 3 : awayteam score
